@@ -1,9 +1,10 @@
-/* eslint-disable no-console */
-import { Command } from '@oclif/command'
-import { network } from '../../storage/networks'
-import { CliUx } from '@oclif/core'
-import { green, red } from 'colors'
-import { getExplorer } from '../../apis/getExplorer'
+import {Command, flags} from '@oclif/command'
+import {CliUx} from '@oclif/core'
+import {getExplorer} from '../../apis/getExplorer'
+import {network} from '../../storage/networks'
+import {parseAuthorization} from '../../utils/multisig'
+
+/* eslint-disable camelcase */
 
 export default class MultisigApprove extends Command {
   static description = 'Multisig Approve'
@@ -14,27 +15,35 @@ export default class MultisigApprove extends Command {
     {name: 'auth', required: true, help: 'Signing authorization (e.g. user1@active)'},
   ]
 
-  async run() {
-    const {args: { proposer, proposal, auth }} = this.parse(MultisigApprove)
-    const [actor, permission] = auth.split('@')
+  static flags = {
+    level: flags.string({char: 'l', description: 'Requested permission to approve (e.g. user1@active)'}),
+    'proposal-hash': flags.string({description: 'Optional proposal transaction hash'}),
+  }
 
-    try {
-      await network.transact({
-        actions: [{
-          account: 'eosio.msig',
-          name: 'approve',
-          data: {
-            proposer,
-            proposal_name: proposal,
-            level: { actor, permission }
-          },
-          authorization: [{ actor, permission }]
-        }]
-      })
-      CliUx.ux.log(green(`Multisig ${proposal} successfully approved.`))
-      CliUx.ux.url(`View Proposal`, `${getExplorer()}/msig/${actor}/${proposal}`)
-    } catch (err: any) {
-      return this.error(red(err));
+  async run(): Promise<void> {
+    const {args, flags: commandFlags} = this.parse(MultisigApprove)
+    const authorization = parseAuthorization(args.auth)
+    const level = parseAuthorization(commandFlags.level || args.auth, 'level')
+    const data: Record<string, unknown> = {
+      proposer: args.proposer,
+      proposal_name: args.proposal,
+      level,
     }
+
+    if (commandFlags['proposal-hash']) {
+      data.proposal_hash = commandFlags['proposal-hash']
+    }
+
+    await network.transact({
+      actions: [{
+        account: 'eosio.msig',
+        name: 'approve',
+        data,
+        authorization: [authorization],
+      }],
+    })
+
+    CliUx.ux.log(`Multisig ${args.proposal} successfully approved.`)
+    CliUx.ux.url('View Proposal', `${getExplorer()}/msig/${authorization.actor}/${args.proposal}`)
   }
 }

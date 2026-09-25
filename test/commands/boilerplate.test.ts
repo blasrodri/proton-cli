@@ -1,6 +1,7 @@
 import * as rimraf from 'rimraf'
-import * as path from 'path'
-import * as fs from 'fs'
+import fs from 'node:fs'
+import path from 'node:path'
+import git from 'isomorphic-git'
 import {expect, test} from '@oclif/test'
 
 // const TEST_DIR_NAME = 'testdir'
@@ -15,6 +16,11 @@ const folderExists = (baseDir: string) => (folder: string) => fs.existsSync(path
 
 describe('boilerplate', () => {
   test
+  .stub(git, 'clone', async () => {
+    for (const folder of folders) {
+      fs.mkdirSync(path.join(DEFAULT_DIR, folder), {recursive: true})
+    }
+  })
   .command(['boilerplate'])
   .finally(() => rimraf.sync(DEFAULT_DIR))
   .it('All folders exist', (_: any) => {

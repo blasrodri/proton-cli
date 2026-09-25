@@ -1,11 +1,11 @@
-import { Command, flags } from '@oclif/command'
+import {Command, flags} from '@oclif/command'
 
 import git from 'isomorphic-git'
 import http from 'isomorphic-git/http/node'
-import * as path from 'path'
-import * as fs from 'fs'
+import fs from 'node:fs'
+import path from 'node:path'
 import * as rimraf from 'rimraf'
-import { CliUx } from '@oclif/core'
+import {CliUx} from '@oclif/core'
 
 const BOILERPLATE_URL = 'https://github.com/ProtonProtocol/proton-boilerplate.git'
 const BOILERPLATE_BRANCH = 'master'
@@ -21,13 +21,13 @@ export default class Boilerplate extends Command {
     {name: 'folder'},
   ]
 
-  async run() {
+  async run(): Promise<void> {
     const {args} = this.parse(Boilerplate)
 
     const name = args.folder ?? 'proton-boilerplate'
     const dir = path.join(process.cwd(), name)
 
-    this.log(`Boilerplateping to ${name} folder`)
+    this.log(`Boilerplating to ${name} folder`)
     await git.clone({
       fs,
       http,
@@ -40,7 +40,7 @@ export default class Boilerplate extends Command {
     rimraf.sync(path.join(dir, '.git'))
   }
 
-  async catch(e: Error) {
+  async catch(e: Error): Promise<void> {
     CliUx.ux.styledJSON(e)
   }
 }
